@@ -124,4 +124,20 @@ func TestStabilityTracesZipkin(t *testing.T) {
 		processorsConfig,
 		nil,
 	)
+
+func TestStabilityTracesDatadog(t *testing.T) {
+	scenarios.Scenario10kItemsPerSecond(
+		t,
+		datasenders.NewDatadogDataSender(),
+		datareceivers.NewDataDogDataReceiver(),
+		testbed.ResourceSpec{
+			ExpectedMaxCPU:      80,
+			ExpectedMaxRAM:      110,
+			ResourceCheckPeriod: resourceCheckPeriod,
+		},
+		contribPerfResultsSummary,
+		processorsConfig,
+		nil,
+	)
+}
 }
