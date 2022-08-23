@@ -30,16 +30,21 @@ import (
 
 func toTraces(traces datadogpb.Traces, req *http.Request) ptrace.Traces {
 	dest := ptrace.NewTraces()
-	resSpans := dest.ResourceSpans().AppendEmpty()
-	resSpans.SetSchemaUrl(semconv.SchemaURL)
 
 	for _, trace := range traces {
-		ils := resSpans.ScopeSpans().AppendEmpty()
-		ils.Scope().SetName("Datadog-" + req.Header.Get("Datadog-Meta-Lang"))
-		ils.Scope().SetVersion(req.Header.Get("Datadog-Meta-Tracer-Version"))
 		spans := ptrace.NewSpanSlice()
 		spans.EnsureCapacity(len(trace))
 		for _, span := range trace {
+			resSpans := dest.ResourceSpans().AppendEmpty()
+			resSpans.SetSchemaUrl(semconv.SchemaURL)
+
+			ils := resSpans.ScopeSpans().AppendEmpty()
+			ils.Scope().SetName("Datadog-" + req.Header.Get("Datadog-Meta-Lang"))
+			ils.Scope().SetVersion(req.Header.Get("Datadog-Meta-Tracer-Version"))
+
+			resSpansAttributes := resSpans.Resource().Attributes()
+			resSpansAttributes.InsertString(semconv.AttributeServiceName, span.Service)
+
 			newSpan := spans.AppendEmpty()
 
 			newSpan.SetTraceID(uInt64ToTraceID(0, span.TraceID))
@@ -73,8 +78,8 @@ func toTraces(traces datadogpb.Traces, req *http.Request) ptrace.Traces {
 			default:
 				newSpan.SetKind(ptrace.SpanKindClient)
 			}
+			spans.MoveAndAppendTo(ils.Spans())
 		}
-		spans.MoveAndAppendTo(ils.Spans())
 	}
 
 	return dest
